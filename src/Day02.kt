@@ -1,5 +1,3 @@
-import java.io.File
-
 // Day 2, Advent of Code 2021
 fun main() {
     fun part1(input: List<Vector>): Int {
