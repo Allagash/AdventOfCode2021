@@ -1,4 +1,4 @@
-// Day 6, Advent of Code 2021
+// Day 6, Advent of Code 2021, Lanternfish spawning
 
 fun main() {
     val testInput = readInput("Day06_test") // just one line of input...

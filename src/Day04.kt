@@ -1,4 +1,4 @@
-// Day 4, Advent of Code 2021
+// Day 4, Advent of Code 2021, Giant Squid bingo
 fun main() {
     val testInput = readInput("Day04_test")
     val calledNums = testInput[0].split(",").map { it.toInt() } // called Bingo numbers

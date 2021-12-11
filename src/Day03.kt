@@ -1,4 +1,4 @@
-// Day 3, Advent of Code 2021
+// Day 3, Advent of Code 2021, Binary Diagnostic
 fun main() {
     fun part1(input: List<String>): Int {
         val bitCount = IntArray(input[0].length)

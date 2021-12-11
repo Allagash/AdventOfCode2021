@@ -1,6 +1,7 @@
 import kotlin.math.*
 
-// Day05, Advent of Code 2021
+// Day05, Advent of Code 2021, Hydrothermal Venture
+// Line intersections
 data class Line (val x0: Int, val y0: Int, val x1: Int, val y1: Int)
 
 fun main() {

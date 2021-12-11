@@ -1,4 +1,4 @@
-// Day 2, Advent of Code 2021
+// Day 2, Advent of Code 2021, Dive!
 fun main() {
     fun part1(input: List<Vector>): Int {
         var forward = 0

@@ -1,4 +1,4 @@
-// Day 1, Advent of Code 2021
+// Day 1, Advent of Code 2021, Sonar Sweep
 
 fun main() {
     fun part1(input: List<Int>): Int {
