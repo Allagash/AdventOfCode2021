@@ -1,5 +1,6 @@
 import java.util.*
 import kotlin.math.abs
+import kotlin.system.measureTimeMillis
 
 // Day 15, Advent of Code 2021, Chiton
 
@@ -54,18 +55,23 @@ fun main() {
     }
 
     fun part2(grid: List<List<Int>>): Long {
-        val bigGraph = MutableList(grid.size * 5) { MutableList(grid[0].size * 5) { 0 } }
-        for (x in bigGraph.indices) {
-            for (y in 0 until bigGraph[0].size) {
-                var newXVal = grid[x % grid.size][y % grid[0].size]
-                var inc = x / grid.size + y / grid[0].size
-                newXVal += inc
-                bigGraph[x][y] = if (newXVal > 9) newXVal - 9 else newXVal
-                check(bigGraph[x][y] in 1..9)
+        var answer = 0L
+        val timeInMillis = measureTimeMillis {
+            val bigGraph = MutableList(grid.size * 5) { MutableList(grid[0].size * 5) { 0 } }
+            for (x in bigGraph.indices) {
+                for (y in 0 until bigGraph[0].size) {
+                    var newXVal = grid[x % grid.size][y % grid[0].size]
+                    val inc = x / grid.size + y / grid[0].size
+                    newXVal += inc
+                    bigGraph[x][y] = if (newXVal > 9) newXVal - 9 else newXVal
+                    check(bigGraph[x][y] in 1..9)
+                }
             }
+            val end = Pair(bigGraph.size - 1, bigGraph[0].size - 1)
+            answer = aStarSearch(bigGraph, Pair(0, 0), end)
         }
-        val end = Pair(bigGraph.size - 1, bigGraph[0].size - 1)
-        return aStarSearch(bigGraph, Pair(0, 0), end)
+        println("part 2 time in milliseconds is $timeInMillis")
+        return answer
     }
 
     val testInput = readSingleDigitGrid("Day15_test")

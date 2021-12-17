@@ -8,6 +8,8 @@ data class Vector(var direction: String, var amount: Int)
 /**
  * Reads lines from the given input txt file.
  */
+fun readInputAsOneLine(name: String) = File("src", "$name.txt").readText().trim()
+
 fun readInput(name: String) = File("src", "$name.txt").readLines()
 
 fun readInputAsInts(name: String) = File("src", "$name.txt").readLines().map { it.toInt() }
