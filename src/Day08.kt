@@ -11,9 +11,9 @@ val canonDigits = arrayListOf("abcefg", "cf", "acdeg", "acdfg", "bcdf", "abdfg",
 fun permutations(str: String) : List<String> {
     if (str.length == 1) return listOf(str)
     val ret = mutableListOf<String>()
-    str.forEachIndexed() {  i, c ->
-        val permsSubStr =  permutations(str.substring(0, i) + str.substring(i+1))
-        permsSubStr.forEach() {
+    str.forEachIndexed { i, c ->
+        val permsSubStr = permutations(str.substring(0, i) + str.substring(i + 1))
+        permsSubStr.forEach {
             ret.add(c + it)
         }
     }
@@ -45,8 +45,8 @@ fun main() {
     fun part2(encoded: List<Encoded>): Int {
         val perms = permutations(canon) // all possible scrambled digits encoded
         var sum = 0
-        encoded.forEach() { e -> // go through all lines of input
-            perms.forEach() perm@{ p-> // brute force try all encodings
+        encoded.forEach { e -> // go through all lines of input
+            perms.forEach perm@{ p -> // brute force try all encodings
                 for (reading in e.patterns) {
                     if (decode(p, reading) !in canonDigits) {
                         return@perm // not it, try next solution
@@ -73,7 +73,7 @@ fun main() {
 
 private fun createdEncoded(input: List<String>) : List<Encoded> {
     val encodedInput = ArrayList<Encoded>()
-    input.forEach() {
+    input.forEach {
         encodedInput.add(
             Encoded(
                 it.substringBefore('|').trim().split(' ').map { j -> j.sort() },
