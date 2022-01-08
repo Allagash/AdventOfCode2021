@@ -43,7 +43,7 @@ fun printToString(pos: Positions23) : String {
 // Manhattan distance
 fun Pair<Int, Int>.manhattanDist(other: Pair<Int, Int>) = abs(this.first - other.first) + abs(this.second - other.second)
 
-// Moves from hall into room.
+// Move from hall into room. Only at most one move possible.
 fun Positions23.generateHallMoves(pos: Pair<Int, Int>, amphipod: Char) : List<Pair<Positions23, Int>> {
     val moves = mutableListOf<Pair<Positions23, Int>>()
     // is room open?
@@ -57,7 +57,7 @@ fun Positions23.generateHallMoves(pos: Pair<Int, Int>, amphipod: Char) : List<Pa
     var ok = true
     for (x in (roomTop.first + 1)..roomBottom.first) {
         val roomPos = Pair(x, roomTop.second)
-        if (this[roomPos] != null && this[roomBottom] != amphipod){
+        if (this[roomPos] != null && this[roomPos] != amphipod){
             ok = false
             break
         }
@@ -73,23 +73,21 @@ fun Positions23.generateHallMoves(pos: Pair<Int, Int>, amphipod: Char) : List<Pa
             return moves
         }
     }
-    var clone = HashMap(this)
-    clone.remove(pos)
-    clone[roomTop] = amphipod
 
     // get manhattan distance to top of room
     val distance = pos.manhattanDist(roomTop)
-    moves.add(Pair(clone, distance * amphipodData.cost))
 
-    for (x in (roomTop.first + 1)..roomBottom.first) {
+    for (x in roomBottom.first downTo roomTop.first) {
         val roomPos = Pair(x, roomTop.second)
         // if bottom is empty, add that move & cost
-        if (this[roomPos] != null) break
-        clone = HashMap(this)
+        if (this[roomPos] != null) continue
+        val clone = HashMap(this)
         clone.remove(pos)
         clone[roomPos] = amphipod
         moves.add(Pair(clone, (distance + (x - roomTop.first)) * amphipodData.cost))
+        break
     }
+
     return moves
 }
 
@@ -175,13 +173,15 @@ fun Positions23.generateRoomMovesBottom(pos: Pair<Int, Int>, amphipod: Char) : L
         return moves
     }
 
-    val clone = HashMap(this)
-    clone.remove(pos)
-    clone[Pair(pos.first -1, pos.second)] = amphipod
-
     // Same moves as top of room, plus one more move
     val distToTop = pos.first - amphipodData.roomTop.first
-    val newMoves = clone.generateRoomMovesTop(Pair(pos.first - distToTop, pos.second), amphipod)
+
+    val clone = HashMap(this)
+    clone.remove(pos)
+    val topOfRoom = Pair(pos.first - distToTop, pos.second) // or just use roomtop?
+    clone[topOfRoom] = amphipod
+
+    val newMoves = clone.generateRoomMovesTop(topOfRoom, amphipod)
     newMoves.forEach {
         moves.add(Pair(it.first, it.second + distToTop * amphipodData.cost)) // add the cost of moving up to top
     }
@@ -257,12 +257,8 @@ fun main() {
         cameFrom[position] = null
         costSoFar[position] = 0L
         var end : Positions23? = null
-        var iter = 0
         while (openSet.isNotEmpty()) {
             val current = openSet.remove()
-            iter++
-            //println("Trying $iter")
-            //println(printToString(current.first))
             if (isDone(current.first)) {
                 end = current.first
                 break
@@ -310,24 +306,26 @@ fun main() {
     }
 
     fun part2(positions: Positions23): Long {
-        for (c in 'A'..'D') {
-            val bottom = amphipodTypes[c]!!.roomBottom
-            amphipodTypes[c]!!.roomBottom = Pair(bottom.first + 2, bottom.second)
-        }
         var cost: Long
         val timeInMillis = measureTimeMillis {
             cost = aStarSearch(positions)
         }
-        println("part1 time is $timeInMillis")
+        println("part2 time is $timeInMillis")
         return cost
     }
 
     val testInput1 = parse(readInput("Day23_test"))
     check(part1(testInput1) == 12521L)
-    val testInput2 = parse(readInput("Day23_test"), true)
-    //println(part2(testInput2))
-
     val input1 = parse(readInput("Day23"))
     println(part1(input1))
+
+    for (c in 'A'..'D') {
+        val bottom = amphipodTypes[c]!!.roomBottom
+        amphipodTypes[c]!!.roomBottom = Pair(bottom.first + 2, bottom.second)
+    }
+
+    val testInput2 = parse(readInput("Day23_test"), true)
+    check(part2(testInput2) == 44169L)
     val input2 = parse(readInput("Day23"), true)
+    println(part2(input2))
 }
