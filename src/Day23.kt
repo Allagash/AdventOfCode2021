@@ -7,8 +7,9 @@ import kotlin.system.measureTimeMillis
 typealias Positions23 = Map<Pair<Int, Int>, Char>
 
 // Static data for each Amphipod
-data class AmphipodMetadata(val cost: Int, val roomEntrance: Pair<Int, Int>, val roomTop: Pair<Int, Int>, val roomBottom: Pair<Int, Int>)
+data class AmphipodMetadata(val cost: Int, val roomEntrance: Pair<Int, Int>, val roomTop: Pair<Int, Int>, var roomBottom: Pair<Int, Int>)
 
+// Set up for Part 1
 val amphipodTypes = mapOf(
     'A' to AmphipodMetadata(1, Pair(1, 3),  Pair(2, 3), Pair(3, 3)),
     'B' to AmphipodMetadata(10, Pair(1, 5), Pair(2, 5), Pair(3, 5)),
@@ -18,25 +19,31 @@ val amphipodTypes = mapOf(
 
 fun printToString(pos: Positions23) : String {
     var output = "#############\n#"
-    for (i in 1..11) {
+    for (i in 1..11) { // hallway
         output += pos[Pair(1, i)] ?: "."
     }
     output += "#\n"
     val roomCols = listOf(3, 5, 7, 9)
-    for (i in 0..12) {
+    for (i in 0..12) { // top of room
         output += pos[Pair(2, i)] ?: if (i in roomCols) "." else "#"
     }
-    output += "\n  "
-    for (i in 2..10) {
-        output += pos[Pair(3, i)] ?:  if (i in roomCols) "." else "#"
+    output += "\n"
+    val numLoops = if (pos.size == 8) 1 else 3
+    for (i in 0 until numLoops) {
+        output += "  "
+        for (y in 2..10) {
+            output += pos[Pair(3 + i, y)] ?:  if (y in roomCols) "." else "#"
+        }
+        output += "\n"
     }
-    output += "\n  #########"
+    output += "  #########"
     return output
 }
 
 // Manhattan distance
 fun Pair<Int, Int>.manhattanDist(other: Pair<Int, Int>) = abs(this.first - other.first) + abs(this.second - other.second)
 
+// Moves from hall into room.
 fun Positions23.generateHallMoves(pos: Pair<Int, Int>, amphipod: Char) : List<Pair<Positions23, Int>> {
     val moves = mutableListOf<Pair<Positions23, Int>>()
     // is room open?
@@ -47,7 +54,15 @@ fun Positions23.generateHallMoves(pos: Pair<Int, Int>, amphipod: Char) : List<Pa
     val roomTop = amphipodData.roomTop
     val roomBottom = amphipodData.roomBottom
     if (this[roomTop] != null) return moves // Room full, can't move into room
-    if (this[roomBottom] != null && this[roomBottom] != amphipod) return moves // can't move into room w/ wrong amphipod
+    var ok = true
+    for (x in (roomTop.first + 1)..roomBottom.first) {
+        val roomPos = Pair(x, roomTop.second)
+        if (this[roomPos] != null && this[roomBottom] != amphipod){
+            ok = false
+            break
+        }
+    }
+    if (!ok) return moves // can't move into room w/ wrong amphipod
 
     val step = if (roomTop.second >  pos.second) 1 else -1
     // we know it's not right outside the room; that's not allowed
@@ -66,12 +81,14 @@ fun Positions23.generateHallMoves(pos: Pair<Int, Int>, amphipod: Char) : List<Pa
     val distance = pos.manhattanDist(roomTop)
     moves.add(Pair(clone, distance * amphipodData.cost))
 
-    // if bottom is empty, add that move & cost
-    if (this[roomBottom] == null) {
+    for (x in (roomTop.first + 1)..roomBottom.first) {
+        val roomPos = Pair(x, roomTop.second)
+        // if bottom is empty, add that move & cost
+        if (this[roomPos] != null) break
         clone = HashMap(this)
         clone.remove(pos)
-        clone[roomBottom] = amphipod
-        moves.add(Pair(clone, (distance + 1) * amphipodData.cost))
+        clone[roomPos] = amphipod
+        moves.add(Pair(clone, (distance + (x - roomTop.first)) * amphipodData.cost))
     }
     return moves
 }
@@ -85,9 +102,19 @@ fun Positions23.generateRoomMovesTop(pos: Pair<Int, Int>, amphipod: Char) : List
     val roomTop = amphipodData.roomTop
     val roomBottom = amphipodData.roomBottom
 
-    // If we're in the right spot & spot below us is correct, don't generate moves
-    if (roomTop == pos && this[roomBottom] == amphipod) {
-        return moves
+    // If we're in the right spot & spots below us are correct, don't generate moves
+    if (roomTop == pos) { // && this[roomBottom] ==
+        var ok = true
+        for (x in (roomTop.first + 1)..roomBottom.first) {
+            val roomPos = Pair(x, roomTop.second)
+            if (this[roomPos] != amphipod) {
+                ok = false
+                break
+            }
+        }
+        if (ok) {
+            return moves
+        }
     }
 
     val startPos = Pair(pos.first-1, pos.second)
@@ -128,10 +155,21 @@ fun Positions23.generateRoomMovesBottom(pos: Pair<Int, Int>, amphipod: Char) : L
     val roomBottom = amphipodData.roomBottom
 
     // If we're in the right spot, don't generate moves
-    if (roomBottom == pos) {
-        return moves
+    if (roomBottom.second == pos.second) {
+        var ok = true
+        for (x in pos.first..roomBottom.first) {
+            val roomPos = Pair(x, roomBottom.second)
+            if (this[roomPos] != amphipod) {
+                ok = false
+                break
+            }
+        }
+        if (ok) {
+            return moves
+        }
     }
 
+    // shouldn't have to loop here, no gaps in room
     // don't generate moves if blocked on top
     if (this[Pair(pos.first-1, pos.second)] != null) {
         return moves
@@ -142,9 +180,10 @@ fun Positions23.generateRoomMovesBottom(pos: Pair<Int, Int>, amphipod: Char) : L
     clone[Pair(pos.first -1, pos.second)] = amphipod
 
     // Same moves as top of room, plus one more move
-    val newMoves = clone.generateRoomMovesTop(Pair(pos.first -1, pos.second), amphipod)
+    val distToTop = pos.first - amphipodData.roomTop.first
+    val newMoves = clone.generateRoomMovesTop(Pair(pos.first - distToTop, pos.second), amphipod)
     newMoves.forEach {
-        moves.add(Pair(it.first, it.second + amphipodData.cost)) // add the cost of moving up one
+        moves.add(Pair(it.first, it.second + distToTop * amphipodData.cost)) // add the cost of moving up to top
     }
     return moves
 }
@@ -159,8 +198,7 @@ fun Positions23.generateMoves(): List<Pair<Positions23, Int>> {
             when (it.first) {
                 1 -> generateHallMoves(it, this[it]!!)
                 2 -> generateRoomMovesTop(it, this[it]!!)
-                3 -> generateRoomMovesBottom(it, this[it]!!)
-                else -> throw Exception("bad position")
+                else -> generateRoomMovesBottom(it, this[it]!!)
             }
         )
     }
@@ -182,10 +220,12 @@ fun Positions23.calcHeuristicCost() : Long {
         }
         cost += amphipodData.cost * dist
     }
-    // Will we have to move an amphipod down to the bottom spot eventually?
+    // Will we have to move an amphipod down to the bottom spots eventually?
     amphipodTypes.forEach {
-        if (this[it.value.roomBottom] != it.key) {
-            cost += it.value.cost
+        for (x in (it.value.roomTop.first + 1)..it.value.roomBottom.first) {
+            if (this[Pair(x, it.value.roomTop.second)] != it.key) {
+                cost += it.value.cost
+            }
         }
     }
     return cost
@@ -195,11 +235,16 @@ fun Positions23.calcHeuristicCost() : Long {
 fun main() {
 
     fun isDone(position: Positions23): Boolean {
-        check(position.size == 8)
-        return position[Pair(2, 3)] == 'A' && position[Pair(3, 3)] == 'A' &&
+        check(position.size == 8 || position.size == 16)
+        val part1 = position[Pair(2, 3)] == 'A' && position[Pair(3, 3)] == 'A' &&
                 position[Pair(2, 5)] == 'B' && position[Pair(3, 5)] == 'B' &&
                 position[Pair(2, 7)] == 'C' && position[Pair(3, 7)] == 'C' &&
                 position[Pair(2, 9)] == 'D' && position[Pair(3, 9)] == 'D'
+        if (position.size == 8 || !part1) return part1 // if part1 false, we don't have to check part2
+        return position[Pair(4, 3)] == 'A' && position[Pair(5, 3)] == 'A' &&
+                position[Pair(4, 5)] == 'B' && position[Pair(5, 5)] == 'B' &&
+                position[Pair(4, 7)] == 'C' && position[Pair(5, 7)] == 'C' &&
+                position[Pair(4, 9)] == 'D' && position[Pair(5, 9)] == 'D'
     }
 
     // A* search
@@ -212,8 +257,12 @@ fun main() {
         cameFrom[position] = null
         costSoFar[position] = 0L
         var end : Positions23? = null
+        var iter = 0
         while (openSet.isNotEmpty()) {
             val current = openSet.remove()
+            iter++
+            //println("Trying $iter")
+            //println(printToString(current.first))
             if (isDone(current.first)) {
                 end = current.first
                 break
@@ -232,10 +281,15 @@ fun main() {
         return costSoFar[end]!!
     }
 
-    fun parse(input: List<String>) : Positions23 {
+    fun parse(input: List<String>, part2: Boolean = false) : Positions23 {
+        val input2 = input.toMutableList()
+        if (part2) {
+            input2.add(3, "  #D#C#B#A#")
+            input2.add(4, "  #D#B#A#C#")
+        }
         val positions = mutableMapOf<Pair<Int, Int>, Char>()
         val chars = listOf("A", "B", "C", "D")
-        input.forEachIndexed { idx, it ->
+        input2.forEachIndexed { idx, it ->
             var startIdx = -1
             while(true) {
                 val found = it.findAnyOf(chars, startIdx + 1) ?: return@forEachIndexed
@@ -256,12 +310,24 @@ fun main() {
     }
 
     fun part2(positions: Positions23): Long {
-        return 0L
+        for (c in 'A'..'D') {
+            val bottom = amphipodTypes[c]!!.roomBottom
+            amphipodTypes[c]!!.roomBottom = Pair(bottom.first + 2, bottom.second)
+        }
+        var cost: Long
+        val timeInMillis = measureTimeMillis {
+            cost = aStarSearch(positions)
+        }
+        println("part1 time is $timeInMillis")
+        return cost
     }
 
-    val testInput = parse(readInput("Day23_test"))
-    check(part1(testInput) == 12521L)
+    val testInput1 = parse(readInput("Day23_test"))
+    check(part1(testInput1) == 12521L)
+    val testInput2 = parse(readInput("Day23_test"), true)
+    //println(part2(testInput2))
 
-    val input = parse(readInput("Day23"))
-    println(part1(input))
+    val input1 = parse(readInput("Day23"))
+    println(part1(input1))
+    val input2 = parse(readInput("Day23"), true)
 }
