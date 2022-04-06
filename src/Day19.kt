@@ -2,12 +2,15 @@
 
 import kotlin.math.abs
 import kotlin.math.max
+import kotlin.system.measureTimeMillis
 
+// See
 // https://github.com/xorum-io/advent-of-code-2021/blob/main/src/Day19.kt
 // from https://raw.githubusercontent.com/Jbrusaw/AdventOfCode2021/main/src/day19.kt
 
 fun main() {
 
+    // aka Beacon
     data class Point(val x: Int, val y: Int, val z: Int) {
         operator fun plus(other: Point): Point {
             return Point(x + other.x, y + other.y, z + other.z)
@@ -16,14 +19,14 @@ fun main() {
         operator fun minus(other: Point): Point {
             return Point(x - other.x, y - other.y, z - other.z)
         }
+
+        fun manhattanDistance() = abs(x) + abs(y) + abs(z)
     }
 
-    // sort by x, then store the deltas between x values. Do the same for y, etc.
-
     data class Scanner(val id: Int, var readings: List<Point>) {
-
         var done = false
         var origin = Point(0, 0, 0)
+        val alreadyTested = mutableListOf<Scanner>()
 
         fun rotate(i: Int) : List<Point> {
             check(i in 0..23)
@@ -63,9 +66,10 @@ fun main() {
         }
 
         fun rotateAndCheck(scanner: Scanner) : Boolean {
-            if (scanner.done) {
+            if (scanner.done || alreadyTested.contains(scanner)) {
                 return false
             }
+            alreadyTested.add(scanner)
             for(i in 0..23) {
                 val rotatedPts = scanner.rotate(i)
                 rotatedPts.forEach { r ->
@@ -85,21 +89,18 @@ fun main() {
         }
     }
 
-    fun manhattanDistance(scanner1 : Scanner, scanner2: Scanner) : Int {
-        val pt = scanner1.origin - scanner2.origin
-        return abs(pt.x) + abs(pt.y) + abs(pt.z)
-    }
+    fun manhattanDistance(scanner1 : Scanner, scanner2: Scanner) =
+        (scanner1.origin - scanner2.origin).manhattanDistance()
 
 
-    fun part1(input: List<Scanner>): Int {
+    fun solve(input: List<Scanner>): Pair<Int, Int> {
         val located = mutableListOf<Scanner>()
         val todo = input.toMutableList()
         located.add(input[0])
         todo.remove(input[0])
 
-        val done = mutableListOf<Scanner>()
-
         while(todo.isNotEmpty()) {
+            val done = mutableListOf<Scanner>()
             located.forEach { l ->
                 todo.forEach { t ->
                     if (l.rotateAndCheck(t)) {
@@ -110,7 +111,6 @@ fun main() {
             check(done.isNotEmpty())
             located.addAll(done)
             todo.removeAll(done)
-            done.clear()
         }
         var maxDistance = 0
         located.forEachIndexed { i, it ->
@@ -118,16 +118,8 @@ fun main() {
                 maxDistance = max(maxDistance, manhattanDistance(it, located[j]))
             }
         }
-
-        println("dist = $maxDistance")
-
-
         val uniqueBeacons = located.map {it.readings}.flatten().distinct().size
-        return uniqueBeacons
-    }
-
-    fun part2(input: List<Scanner>): Long {
-        return 0L
+        return Pair(uniqueBeacons, maxDistance)
     }
 
     fun parse(input: List<String>): List<Scanner> {
@@ -141,7 +133,7 @@ fun main() {
                     id = it.split("--- scanner ")[1].split(" ---")[0].toInt()
                 }
                 if (pts.isNotEmpty()) {
-                    scanners.add(Scanner(id, pts.toList())) // use toList() to get deep copy list of points
+                    scanners.add(Scanner(id, pts.toList())) // use toList() to get copy list of points
                     pts.clear()
                 }
                 return@forEach // like a continue
@@ -150,16 +142,18 @@ fun main() {
             pts.add(Point(x, y, z))
         }
         if (pts.isNotEmpty()) {
-            scanners.add(Scanner(id, pts.toList())) // use toList() to get deep copy list of points
+            scanners.add(Scanner(id, pts.toList())) // use toList() to get copy list of points
         }
         return scanners
     }
 
-    val testInput = parse(readInput("Day19_test"))
-    check(part1(testInput) == 79)
-   // check(part2(testInput) == 0L)
+    val testResults = solve(parse(readInput("Day19_test")))
+    check(testResults.first == 79)
+    check(testResults.second == 3621)
 
-    val input = parse(readInput("Day19"))
-    println(part1(input))
-//    println(part2(input))
+    var solutions : Pair<Int, Int>
+    val timeMs = measureTimeMillis{
+        solutions = solve(parse(readInput("Day19")))
+    }
+    println("Part 1: ${solutions.first}, Part 2: ${solutions.second}, took $timeMs ms")
 }
